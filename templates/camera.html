@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            margin-top: 30px;
+        }
+
+        .video-container {
+            width: 100%;
+            max-width: 800px;
+            /* Set a maximum width for large screens */
+            margin: 0 auto;
+            position: relative;
+            padding-top: 56.25%;
+            /* 16:9 Aspect Ratio */
+            background: #333;
+            /* Background color when video is off */
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #333;
+            display: none;
+            /* Hide the video feed by default */
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            /* Center the buttons horizontally */
+            gap: 10px;
+            /* Space between buttons */
+            margin-top: 20px;
+            /* Space above the controls */
+        }
+
+        #currentPrediction,
+        #sentence,
+        #lastSentence {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        #videoError {
+            color: red;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        .tab-content {
+            padding: 15px;
+        }
+
+        .nav-tabs {
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-around;
+            /* Distribute space evenly */
+        }
+
+        .nav-item {
+            flex: 1;
+            /* Allow items to grow evenly */
+            text-align: center;
+        }
+
+        .nav-link {
+            padding: 0.5rem 0;
+            /* Adjust padding for touch targets */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-icon {
+            width: 35px;
+            /* Adjust width as needed */
+            height: 35px;
+            /* Adjust height as needed */
+        }
+
+        .feature-heading {
+            display: block;
+            font-size: 10px;
+            /* Adjust font size as needed */
+            margin-top: 2px;
+            /* Spacing between image and heading */
+        }
+
+        @media (min-width: 576px) {
+            .btn-icon {
+                width: 30px;
+                /* Larger icons on small devices */
+                height: 30px;
+                /* Larger icons on small devices */
+            }
+
+            .feature-heading {
+                font-size: 12px;
+                /* Larger font size on small devices */
+            }
+        }
+
+        @media (min-width: 768px) {
+            .btn-icon {
+                width: 40px;
+                /* Larger icons on medium devices and up */
+                height: 40px;
+                /* Larger icons on medium devices and up */
+            }
+
+            .feature-heading {
+                font-size: 14px;
+                /* Larger font size on medium devices and up */
+            }
+        }
+
+        /* Ensure the tabs are fixed at the bottom in mobile view */
+        .tabs-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+            /* Background color for the tabs */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+            /* Optional shadow */
+            z-index: 1000;
+            /* Ensure tabs are above other content */
+        }
+
+        /* Style for nav-tabs to ensure they are responsive */
+        .nav-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            /* Prevent wrapping */
+            justify-content: space-around;
+            /* Distribute space evenly */
+            border-bottom: none;
+            /* Remove bottom border */
+            margin: 0;
+            /* Remove default margin */
+            padding: 0;
+            /* Remove default padding */
+        }
+
+        /* Style for each nav-link to ensure proper alignment */
+        .nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem 0;
+            /* Adjust padding for touch targets */
+            text-align: center;
+        }
+
+        /* Adjust icon and heading sizes for different viewports */
+        .btn-icon {
+            width: 24px;
+            /* Default width */
+            height: 24px;
+            /* Default height */
+        }
+
+        .feature-heading {
+            font-size: 10px;
+            /* Default font size */
+            margin-top: 2px;
+            /* Space between image and heading */
+        }
+
+        /* Increase sizes for small and medium devices */
+        @media (min-width: 576px) {
+            .btn-icon {
+                width: 30px;
+                /* Larger icon size */
+                height: 30px;
+                /* Larger icon size */
+            }
+
+            .feature-heading {
+                font-size: 12px;
+                /* Larger font size */
+            }
+        }
+
+        @media (min-width: 768px) {
+            .btn-icon {
+                width: 40px;
+                /* Larger icon size */
+                height: 40px;
+                /* Larger icon size */
+            }
+
+            .feature-heading {
+                font-size: 14px;
+                /* Larger font size */
+            }
+        }
+
+        /* Ensure active tab has proper background color */
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Add spacing to ensure tabs don't overlap */
+        .nav-item {
+            flex: 1;
+            /* Allow items to grow evenly */
+            text-align: center;
+            padding: 0;
+            /* Remove default padding */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Tabs Content -->
+        <div class="tab-content">
+            <!-- Camera Tab -->
+            <div class="tab-pane fade show active" id="camera" role="tabpanel" aria-labelledby="camera-tab">
+                <h5 class="mb-4 text-center" style="font-weight: bold;">Sign Language Recognition</h5>
+                <div class="video-container shadow-lg">
+                    <img id="video" src="" alt="Video Feed" class="img-fluid shadow-lg">
+                </div>
+                <div class="controls">
+                    <button id="startButton" class="btn btn-primary shadow-lg ">Start Camera</button>
+                    <button id="stopButton" class="btn btn-danger shadow-lg">Stop Camera</button>
+                </div>
+                <div id="currentPrediction" class="mt-3 fw-bold">Sign: None</div>
+                <div id="sentence" class="mt-2">Sentence: </div>
+                <div id="lastSentence" class="mt-2 fw-bold">Last Sentence: </div>
+                <div id="videoError" class="mt-3" style="display: none;"></div>
+            </div>
+
+            <!-- Animation Generator Tab -->
+            <div class="tab-pane fade shadow-lg" id="animation" role="tabpanel" aria-labelledby="animation-tab">
+                <div class="card">
+                    <div class="card-header" style="text-align: center;font-weight: bold;">
+                        Sign Animation Generator
+                    </div>
+                    
+                    <div class="card-body">
+                        <form action="/animation" method="post">
+                            <div class="input-group mb-3">
+                                <input type="text" name="sen" class="form-control" id="speechToText"
+                                    placeholder="Enter your text here">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="record()">
+                                        <img src="{{ url_for('static', filename='words/mic3.png') }}" alt="Mic Icon"
+                                            style="width: 20px; height: 20px;">
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="submit" class="btn btn-success w-100 shadow-lg" value="Generate Animation">
+
+                        </form>
+
+                        <div class="keywords mt-4">
+                            <h6 style="text-align: center;font-weight: bold;">Key Words Identified:</h6>
+                            <ul id="list" class="list-group list-group-horizontal" style="font-size: medium;">
+                                {% for word in words %}
+                                <li id="{{ loop.index0 }}" class="list-group-item">{{ word }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="animation-container mt-4">
+                            <h5 style="text-align: center;font-weight: bold;">Sign Language Animation:</h5>
+                            <video id="videoPlayer" class="mt-2" preload="auto">
+                                <source src="" type="video/mp4">
+                                Your browser does not support HTML5 video.
+                            </video>
+                            <br>
+                            <div class="btn-container p-4">
+                                <button onclick="playPause()" class="btn btn-light">
+                                    <img src="{{ url_for('static', filename='assets/img/pause-play.png') }}" alt="Play/Pause" class="btn-icon">
+                                </button>
+                                <span class="feature-heading">&nbsp;&nbsp;Play/Pause</span>
+                            </div>
+                            
+                            <div class="loading-spinner" id="loadingSpinner">
+                                <img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading"
+                                    style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coming Soon Tab -->
+            <div class="tab-pane fade shadow-lg rounded" id="coming-soon" role="tabpanel" aria-labelledby="coming-soon-tab">
+                <div class="text-center mt-5">
+                    <h4>🚀 Video Conferencing Feature Coming Soon!</h4>
+                    <p class="mt-3">We’re working hard to bring you a seamless video conferencing experience. Stay tuned
+                        for updates! 📅✨</p>
+                    <img src="https://media.istockphoto.com/id/1289433140/photo/elementary-student-talks-with-teacher-during-virtual-tutoring-session.jpg?s=612x612&w=0&k=20&c=GTvT4NRn8vM5bv1_aFdUOYnxLUIR6Yz2oKLMgST7YpU="
+                        alt="Coming Soon" class="img-fluid mt-4">
+                    <div class="mt-4">
+                        <h4>What to Expect:</h4>
+                        <ul class="list-unstyled">
+                            <li>👥 High-quality video calls</li>
+                            <li>📞 Easy-to-use interface</li>
+                            <li>🔒 Secure connections</li>
+                            <li>💬 Real-time messaging</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Fixed Tabs Navigation -->
+        <div class="tabs-container">
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="camera-tab" data-toggle="tab" href="#camera" role="tab"
+                        aria-controls="camera" aria-selected="true">
+                        <img src="{{ url_for('static', filename='assets/img/Camera.png') }}" alt="Camera"
+                            class="btn-icon">
+                        <span class="feature-heading">Camera</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="animation-tab" data-toggle="tab" href="#animation" role="tab"
+                        aria-controls="animation" aria-selected="false">
+                        <img src="{{ url_for('static', filename='assets/img/text-to-speech.png') }}" alt="Animation"
+                            class="btn-icon">
+                        <span class="feature-heading">Animation</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="coming-soon-tab" data-toggle="tab" href="#coming-soon" role="tab"
+                        aria-controls="coming-soon" aria-selected="false">
+                        <img src="{{ url_for('static', filename='assets/img/video-call.png') }}" alt="Info"
+                            class="btn-icon">
+                        <span class="feature-heading">Video call</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+
+
+        <!-- Bootstrap JS and dependencies -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+        <script>
+            const video = document.getElementById('video');
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const currentPrediction = document.getElementById('currentPrediction');
+            const sentence = document.getElementById('sentence');
+            const lastSentence = document.getElementById('lastSentence');
+            const videoError = document.getElementById('videoError');
+
+            let cameraRunning = false;
+
+            function startCamera() {
+                if (!cameraRunning) {
+                    video.src = '/video_feed'; // Set video source
+                    video.style.display = 'block'; // Show video feed
+                    video.onerror = function () {
+                        videoError.textContent = 'Error loading video feed.';
+                    };
+                    cameraRunning = true;
+                    fetch('/start_camera', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => console.log(data.message))
+                        .catch(error => console.error('Error:', error));
+                }
+            }
+
+            function stopCamera() {
+                if (cameraRunning) {
+                    video.src = ''; // Clear video source
+                    video.style.display = 'none'; // Hide video feed
+                    cameraRunning = false;
+                    fetch('/stop_camera', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => console.log(data.message))
+                        .catch(error => console.error('Error:', error));
+                }
+            }
+
+            startButton.addEventListener('click', startCamera);
+            stopButton.addEventListener('click', stopCamera);
+
+            setInterval(() => {
+                fetch('/current_prediction')
+                    .then(response => response.json())
+                    .then(data => {
+                        currentPrediction.textContent = `Sign: ${data.prediction}`;
+                        sentence.textContent = `Sentence: ${data.sentence}`;
+                        lastSentence.textContent = `Last Sentence: ${data.last_sentence}`;
+                    })
+                    .catch(error => console.error('Error:', error));
+            }, 1000); // Update every second
+
+            // Function to record speech to text
+            function record() {
+                var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-IN';
+
+                recognition.onresult = function (event) {
+                    document.getElementById('speechToText').value = event.results[0][0].transcript;
+                }
+                recognition.start();
+            }
+
+            // Function to play the sign language animation
+            function play() {
+                var videoSource = [];
+                var videos = document.getElementById("list").getElementsByTagName("li");
+                for (var j = 0; j < videos.length; j++) {
+                    videoSource[j] = "{{ url_for('static', filename='words/') }}" + videos[j].innerHTML + ".mp4";
+                }
+
+                var i = 0;
+                var videoCount = videoSource.length;
+
+                function videoPlay(videoNum) {
+                    document.getElementById("list").getElementsByTagName("li")[videoNum].classList.add("active");
+                    document.getElementById("videoPlayer").setAttribute("src", videoSource[videoNum]);
+                    document.getElementById("videoPlayer").load();
+                    document.getElementById("videoPlayer").play();
+                }
+
+                document.getElementById('videoPlayer').addEventListener('ended', myHandler, false);
+                document.getElementById("list").getElementsByTagName("li")[0].classList.add("active");
+
+                videoPlay(0);
+
+                function myHandler() {
+                    document.getElementById("list").getElementsByTagName("li")[i].classList.remove("active");
+                    i++;
+                    if (i == videoCount) {
+                        document.getElementById("videoPlayer").pause();
+                    } else {
+                        videoPlay(i);
+                    }
+                }
+            }
+
+            // Function to play/pause the video player
+            function playPause() {
+                var videoPlayer = document.getElementById("videoPlayer");
+                if (videoPlayer.paused) {
+                    document.getElementById("loadingSpinner").style.display = "block";
+                    play();
+                    document.getElementById("loadingSpinner").style.display = "none";
+                } else {
+                    videoPlayer.pause();
+                }
+            }
+
+            $(document).ready(function () {
+                // Retrieve the active tab from localStorage and activate it
+                const activeTab = localStorage.getItem('activeTab');
+                if (activeTab) {
+                    $('a[href="' + activeTab + '"]').tab('show');
+                }
+            });
+
+            $('a[data-toggle="tab"]').on('click', function () {
+                // Store the href attribute of the clicked tab in localStorage
+                localStorage.setItem('activeTab', $(this).attr('href'));
+            });
+
+        </script>
+</body>
+
+</html>

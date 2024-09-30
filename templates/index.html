@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition - Camera</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex-grow: 1;
+            margin-top: 30px;
+        }
+            
+        .video-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; /* Hide by default */
+            border-radius: 10px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            transition: box-shadow 0.3s;
+        }
+        .btn:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        #currentPrediction, #sentence, #lastSentence {
+            font-size: 20px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        #videoError {
+            color: red;
+            text-align: center;
+        }
+        .tabs-container {
+            background-color: #007bff;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .nav-tabs .nav-link {
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #0056b3;
+        }
+        .nav-tabs .nav-link i {
+            display: block;
+            font-size: 24px;
+        }
+        .footer-text {
+            color: #6c757d;
+            text-align: center;
+            font-size: 5px;
+            padding-bottom:80px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="tab-pane fade show active" id="camera" role="tabpanel" aria-labelledby="camera-tab">
+            <h5 class="mb-4 text-center font-weight-bold">Sign Language Recognition</h5>
+            <div class="video-container shadow-lg">
+                <img id="video" src="" alt="Video Feed" class="img-fluid shadow-lg">
+            </div>
+            <div class="controls">
+                <button id="startButton" class="btn btn-primary shadow-lg">Start Camera</button>
+                <button id="stopButton" class="btn btn-danger shadow-lg">Stop Camera</button>
+            </div>
+            <div id="currentPrediction" class="mt-3 fw-bold">Sign: None</div>
+            <div id="sentence" class="mt-2">Sentence: </div>
+            <div id="lastSentence" class="mt-2 fw-bold">Last Sentence: </div>
+            <div id="videoError" class="mt-3" style="display: none;"></div>
+        </div>
+        <footer class="footer-text text-center" style="font-size: 13px;">
+            &copy; 2024 Sign Language Recognition App. All rights reserved.
+        </footer>
+        
+    
+        <!-- Fixed Tabs Navigation -->
+        <div class="tabs-container">
+            <ul class="nav nav-tabs justify-content-around">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/">
+                        <i class="fas fa-camera"></i>  <!-- Updated icon -->
+                        Camera
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link " href="/animation">
+                        <i class="fas fa-comments"></i>  <!-- New icon for Conversation -->
+                        Conversation
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/coming_soon">
+                        <i class="fas fa-video"></i>
+                        Video Call
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const currentPrediction = document.getElementById('currentPrediction');
+        const sentence = document.getElementById('sentence');
+        const lastSentence = document.getElementById('lastSentence');
+        const videoError = document.getElementById('videoError');
+
+let cameraRunning = false;
+
+function startCamera() {
+    if (!cameraRunning) {
+        fetch('/start_camera', { method: 'POST' })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to start camera');
+                }
+                return response.json();
+            })
+            .then(data => {
+                cameraRunning = true;
+                video.src = '/video_feed'; // Set video source
+                video.style.display = 'block'; // Show video feed
+                console.log('Camera started successfully:', data.message);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                videoError.textContent = 'Failed to start camera.';
+                videoError.style.display = 'block';
+            });
+    }
+}
+
+function stopCamera() {
+    if (cameraRunning) {
+        fetch('/stop_camera', { method: 'POST' })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to stop camera');
+                }
+                return response.json();
+            })
+            .then(data => {
+                cameraRunning = false; // Update state
+                video.src = ''; // Clear video source
+                video.style.display = 'none'; // Hide video feed
+                console.log('Camera stopped successfully:', data.message);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                videoError.textContent = 'Failed to stop camera.';
+                videoError.style.display = 'block';
+            });
+    }
+}
+
+startButton.addEventListener('click', startCamera);
+stopButton.addEventListener('click', stopCamera);
+
+
+
+        setInterval(() => {
+            fetch('/current_prediction')
+                .then(response => response.json())
+                .then(data => {
+                    currentPrediction.textContent = `Sign: ${data.prediction}`;
+                    sentence.textContent = `Sentence: ${data.sentence}`;
+                    lastSentence.textContent = `Last Sentence: ${data.last_sentence}`;
+                })
+                .catch(error => console.error('Error:', error));
+        }, 1000); // Update every second
+
+    </script>
+
+</body>
+
+</html>

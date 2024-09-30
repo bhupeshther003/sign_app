@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition - Animation</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex-grow: 1;
+            margin-top: 30px;
+        }
+        .card {
+            margin-top: 20px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            font-weight: bold;
+        }
+        .tabs-container {
+            background-color: #007bff;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .nav-tabs .nav-link {
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #0056b3;
+        }
+        .nav-tabs .nav-link i {
+            display: block;
+            font-size: 24px;
+        }
+            .footer-text {
+                color: #6c757d;
+                text-align: center;
+                font-size: 5px;
+                padding-bottom:80px;
+            }
+       
+    </style>
+</head>
+<body>
+    <div class="container flex-fill">
+        <div class="card">
+            <div class="card-header text-center">Sign Animation Generator</div>
+            <div class="card-body">
+                <form action="/animation" method="post">
+                    <div class="input-group mb-3">
+                        <input type="text" name="sen" class="form-control" id="speechToText" placeholder="Enter your text here">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary" onclick="record()">
+                                <img src="{{ url_for('static', filename='words/mic3.png') }}" alt="Mic Icon" style="width: 20px; height: 20px;">
+                            </button>
+                        </div>
+                    </div>
+                    <input type="submit" class="btn btn-success w-100 shadow-lg" value="Generate Animation">
+                </form>
+
+                <div class="keywords mt-4">
+                    <h6 class="text-center font-weight-bold">Key Words Identified:</h6>
+                    <ul id="list" class="list-group list-group-horizontal justify-content-center" style="font-size: medium;">
+                        {% for word in words %}
+                        <li id="{{ loop.index0 }}" class="list-group-item">{{ word }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="animation-container mt-4">
+                    <h5 class="text-center font-weight-bold">Sign Language Animation:</h5>
+                    <video id="videoPlayer" class="mt-2 w-100" preload="auto">
+                        <source src="" type="video/mp4">
+                        Your browser does not support HTML5 video.
+                    </video>
+                    <br>
+                    <div class="btn-container p-4">
+                        <button onclick="playPause()" class="btn btn-light">
+                            <img src="{{ url_for('static', filename='assets/img/pause-play.png') }}" alt="Play/Pause" class="btn-icon" width="50">
+                        </button>
+                        <span class="feature-heading">&nbsp;&nbsp;</span>
+                    </div>
+                    
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer-text text-center" style="font-size: 13px;">
+        &copy; 2024 Sign Language Recognition App. All rights reserved.
+    </footer>
+    
+
+    <!-- Fixed Tabs Navigation -->
+    <div class="tabs-container">
+        <ul class="nav nav-tabs justify-content-around">
+            <li class="nav-item">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-camera"></i>  <!-- Updated icon -->
+                    Camera
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="/animation">
+                    <i class="fas fa-comments"></i>  <!-- New icon for Conversation -->
+                    Conversation
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/coming_soon">
+                    <i class="fas fa-video"></i>
+                    Video Call
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+</div>
+
+
+    <script>
+        function play() {
+            var videoSource = [];
+            var videos = document.getElementById("list").getElementsByTagName("li");
+            for (var j = 0; j < videos.length; j++) {
+                videoSource[j] = "{{ url_for('static', filename='words/') }}" + videos[j].innerHTML + ".mp4";
+            }
+
+            var i = 0;
+            var videoCount = videoSource.length;
+
+            function videoPlay(videoNum) {
+                document.getElementById("list").getElementsByTagName("li")[videoNum].classList.add("active");
+                document.getElementById("videoPlayer").setAttribute("src", videoSource[videoNum]);
+                document.getElementById("videoPlayer").load();
+                document.getElementById("videoPlayer").play();
+            }
+
+            document.getElementById('videoPlayer').addEventListener('ended', myHandler, false);
+            document.getElementById("list").getElementsByTagName("li")[0].classList.add("active");
+
+            videoPlay(0);
+
+            function myHandler() {
+                document.getElementById("list").getElementsByTagName("li")[i].classList.remove("active");
+                i++;
+                if (i == videoCount) {
+                    document.getElementById("videoPlayer").pause();
+                } else {
+                    videoPlay(i);
+                }
+            }
+        }
+
+        function playPause() {
+            var videoPlayer = document.getElementById("videoPlayer");
+            if (videoPlayer.paused) {
+                document.getElementById("loadingSpinner").style.display = "block";
+                play();
+                document.getElementById("loadingSpinner").style.display = "none";
+            } else {
+                videoPlayer.pause();
+            }
+        }
+
+        $(document).ready(function () {
+            const activeTab = localStorage.getItem('activeTab');
+            if (activeTab) {
+                $('a[href="' + activeTab + '"]').tab('show');
+            }
+        });
+
+        $('a[data-toggle="tab"]').on('click', function () {
+            localStorage.setItem('activeTab', $(this).attr('href'));
+        });
+
+    </script>
+</body>
+</html>
